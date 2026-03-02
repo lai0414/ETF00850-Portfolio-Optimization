@@ -84,6 +84,31 @@ install.packages(c(
 
 ---
 
+## 🔄 R 版 vs Python 版 套件對照
+
+| 功能 | R 套件 | Python 套件 |
+|------|--------|------------|
+| 股票資料下載 | `quantmod`（`Ad()`） | `yfinance`（`auto_adjust=True`） |
+| 非線性優化 | `nloptr`（COBYLA 演算法） | `scipy.optimize.minimize`（SLSQP 演算法） |
+| 資料處理 | `dplyr`、`tidyr` | `pandas`（`melt`、`pivot_table`） |
+| 繪圖 | `ggplot2` | `matplotlib`、`seaborn` |
+| 日期運算 | `lubridate` | `dateutil.relativedelta` |
+| 數值計算 | 內建 | `numpy` |
+| 統計檢定 | 內建 `t.test()` | `scipy.stats.ttest_rel` |
+| 數字格式化 | `scales` | `matplotlib.ticker` |
+
+### 演算法差異說明
+
+兩個版本的數學模型完全相同，優化器略有不同：
+
+- **R 版（COBYLA）**：無梯度局部優化器，直接處理不等式約束
+- **Python 版（SLSQP）**：序列二次規劃，支援等式 + 不等式約束，為 scipy 中功能最接近 COBYLA 的選項
+
+兩者皆為局部最優
+
+---
+
+
 ## 🔍 各段落設計說明
 
 ### 1. 資料下載與前處理
