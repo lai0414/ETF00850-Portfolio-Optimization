@@ -1,99 +1,312 @@
 # ETF00850-Portfolio-Optimization
-ETF00850成分股投資組合優化與滾動視窗回測系統
 
-![R Version](https://img.shields.io/badge/R-%3E%3D%204.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+# 📊 投資組合優化： ETF00850成分股投資組合優化與滾動視窗回測系統
 
-這是一個完整的投資組合優化與回測框架，利用數學規劃（Mathematical Programming）與滾動視窗（Rolling Window）方法論，實作並比較五種核心投資策略。
-
-## 📌 專案核心目標
-1.  **策略對比**：比較「最大報酬」、「最小風險」、「風險收益平衡」、「等權重」與「定期定額」五種策略。
-2.  **大盤基準 (Benchmark)**：以台灣加權股價指數 (**^TWII**) 為基準，檢驗超額報酬 (**Alpha**)。
-3.  **穩定性驗證**：透過「滾動視窗 (**Rolling Window**)」模擬每半年調倉一次的真實交易行為，避免後見之明偏誤。
+> **Portfolio Optimization with Rolling Window Backtest**
+> 使用數學規劃比較五種投資策略在台灣股市（ETF 00850 成分股）的長期績效表現
 
 ---
 
-## 🛠 系統架構與邏輯拆解
+## 📌 專案摘要
 
-### 1. 資料處理層 (Data Processing)
-* **數據獲取**：使用 `quantmod` API 串接 Yahoo Finance，抓取 2016 至今的還原權值股價，確保回測考慮了配息因子。
-* **資產相關性分析**：
-    系統計算全期間日報酬的相關係數矩陣 $\rho_{i,j} = \frac{\text{cov}(r_i, r_j)}{\sigma_i \sigma_j}$。
-    * **設計邏輯**：相關性是分散風險的核心。模型透過識別低相關資產（如防禦性的中華電與攻擊性的台積電）來優化風險邊界。
-
-
-
-### 2. 優化模型層 (Optimization Engine)
-本系統調用 `nloptr` 中的 **COBYLA** 演算法，在給定約束條件下求解非線性目標函數：
-
-* **最大報酬 (Max Return)**：
-    * 🎯 **目標**：$\max \sum (w_i \cdot \mu_i)$
-    * ⚠️ **限制**：年化風險 $\sqrt{w^T \Sigma w} \leq 30\%$
-    * *設計邏輯：在風險可接受範圍內，最大化資本利得，權重通常集中於高 Beta 動能股。*
-
-* **最小風險 (Min Risk)**：
-    * 🎯 **目標**：$\min \sqrt{w^T \Sigma w}$
-    * ⚠️ **限制**：年化期望報酬 $\sum (w_i \cdot \mu_i) \geq 10\%$
-    * *設計邏輯：尋找資產間的負相關性，抵銷系統波動，適合保守型投資規劃。*
-
-* **平衡策略 (Trade-Off)**：
-    * 🎯 **目標**：$\max (w' \mu - \sqrt{w' \Sigma w})$
-    * ⚠️ **限制**：$\sigma_p \leq 25\%$ 且 $\mu_p \geq 15\%$
-    * *設計邏輯：追求單位風險收益比（類似夏普比率）的最大化。*
-
-### 3. 回測執行層 (Backtesting Framework)
-採用專業級「滾動視窗」機制，模擬真實世界的市場適應力：
-* **訓練窗 (Training)**：2 年數據（約 500 個交易日），用於估算回報向量 $\mu$ 與共變異矩陣 $\Sigma$。
-* **測試窗 (Testing)**：0.5 年（半年），模擬真實持有表現，不使用未來資訊。
-* **複利邏輯**：每期結束後的資產現值滾入下一期，精確計算累積財富走勢。
+| 項目 | 內容 |
+|------|------|
+| 回測期間 | 2018 H1 – 2025 H2（共 16 個半年期） |
+| 標的池 | ETF 00850 成分股（15 檔）|
+| 大盤基準 | 加權股價指數（^TWII）|
+| 語言 / 套件 | R、quantmod、nloptr、ggplot2、dplyr |
+| 優化演算法 | NLOPT_LN_COBYLA（無梯度局部優化）|
+| 初始資本 | 480,000 元（≡ DCA 總投入金額）|
 
 ---
 
-## 📊 關鍵績效指標與公式 (Performance Metrics)
+## 🏆 核心結果一覽
 
-| 指標 | 計算邏輯與公式 | 金融意義 |
-| :--- | :--- | :--- |
-| **Alpha (超額報酬)** | $\alpha = R_p - R_b$ | 策略贏過大盤指數的百分點，衡量「實力」收益。 |
-| **Sharpe Ratio** | $\frac{E[R_p]}{\sigma_p} \cdot \sqrt{2}$ | 每承擔一單位總風險所換取的報酬。 |
-| **Information Ratio** | $\frac{Avg(R_p - R_b)}{SD(R_p - R_b)} \cdot \sqrt{2}$ | 衡量超越大盤的穩定度，IR 越高代表勝過大盤並非偶然。 |
-| **Max Drawdown** | $\min \left( \frac{\text{Wealth}_t - \text{Peak}_t}{\text{Peak}_t} \right)$ | 衡量策略最差情況下的抗跌能力（壓力測試）。 |
-| **p-value (t-test)** | 配對樣本 $t$ 檢定 | 統計學意義上的「測謊機」，判斷 Alpha 是否顯著大於 0。 |
+| 策略 | 期末市值 | 年化報酬 | Sharpe | 最大回撤 | Alpha | 勝率 |
+|------|--------:|-------:|------:|-------:|------:|----:|
+| **Equal_Weight** ⭐ | **2,558,578** | **23.27%** | **1.415** | -10.98% | **+10.08%** | **81.2%** |
+| Max_Return | 2,286,971 | 21.55% | 0.491 | -39.06% | +8.36% | 56.2% |
+| Trade_Off | 1,933,577 | 19.03% | 0.502 | -32.75% | +5.83% | 37.5% |
+| **Benchmark** | 1,293,415 | 13.19% | 0.731 | -20.02% | — | — |
+| DCA | 1,240,469 | 12.60% | 1.197 | -9.00% | -0.59% | 81.2% |
+| Min_Risk | 1,234,279 | 12.53% | 1.008 | -3.83% | -0.66% | 50.0% |
 
----
-
-## 📈 實際產出結果分析 (Visual Analysis)
-
-### 1. 財富累積走勢 (**01_wealth_performance.png**)
-展示策略與 **^TWII (大盤)** 的長期增長對比。
-* **產出分析**：若策略曲線斜率持續大於大盤，代表優化模型有效捕捉到 Alpha。觀察 2022 年大盤重挫時，各策略的回檔深度可判斷其防守特質。
-
-
-
-### 2. 超額報酬 (Alpha) 與勝率 (**02_alpha_comparison.png**)
-* **分析**：直方圖展示各策略相對大盤的年化溢酬。若 **Equal_Weight** 的 Alpha 高達 10% 且 p-value < 0.05，說明「分散投資 + 定期再平衡」具備強大實力。
-
-### 3. 風險-報酬散佈圖 (**05_risk_return_scatter.png**)
-將策略標註於風險(X軸)與報酬(Y軸)平面。
-* **分析**：越往「左上方」移動的策略越理想。理想的優化策略應落在「效率前緣 (Efficient Frontier)」上，提供比大盤更高的回報，同時維持更低的風險。
-
-
-
-### 4. 回撤分析 (**07_drawdown_vs_benchmark.png**)
-* **分析**：比較 2022 年空頭市場各策略的抗震力。**Min_Risk** 策略因配置大量防禦股，其回撤幅度通常遠小於大盤的 -28.5%，標註點可識別最大壓力位置。
+> ⭐ Equal_Weight 為唯一在統計上顯著優於大盤的策略（配對 t-test，p = 0.022）
 
 ---
 
-## 💡 總結分析結論
-* **再平衡的價值**：`Equal Weight` 策略透過每半年強制將權重調回 1/N，實現了「高賣低買」的自動化獲利，Sharpe Ratio 往往領先。
-* **選股勝於一切**：選出的 15 檔標的均為優質龍頭，整體素質優異，因此多數策略皆能產生顯著的正向 Alpha。
-* **低波防禦力**：`Min_Risk` 策略雖年化報酬較低，但其極低的 MDD (-3.82%) 證明了其在空頭市場中作為「避風港」的極佳價值。
+## 📁 專案架構
+
+```
+Portfolio_Backtest/
+├── main.R                          # 主程式（完整流程）
+├── Portfolio_Backtest_Results/
+│   ├── 01_績效總表_含大盤.csv
+│   ├── 02_每期財富淨值序列.csv
+│   ├── 03_各股票平均權重.csv
+│   ├── 04_權重歷史_最大報酬.csv
+│   ├── 05_權重歷史_最小風險.csv
+│   ├── 06_權重歷史_平衡策略.csv
+│   ├── Plots/
+│   │   ├── 01_wealth_vs_benchmark.png
+│   │   ├── 02_alpha_comparison.png
+│   │   ├── 03_sharpe_vs_benchmark.png
+│   │   ├── 04_win_rate_heatmap.png
+│   │   ├── 05_risk_return_scatter.png
+│   │   ├── 06_relative_performance.png
+│   │   └── 07_drawdown_vs_benchmark.png
+│   └── Benchmark_Analysis/
+│       ├── alpha_分析.csv
+│       ├── 資訊比率_分析.csv
+│       ├── 勝率_分析.csv
+│       └── 逐期勝負紀錄.csv
+└── README.md
+```
 
 ---
 
-## 🚀 如何使用
-1.  **安裝必要套件**：
-    ```r
-    install.packages(c("quantmod", "nloptr", "dplyr", "tidyr", "lubridate", "scales", "ggplot2"))
-    ```
-2.  **執行步驟**：直接在 R 環境中執行腳本，系統將自動下載數據並執行 16 輪滾動優化。
-3.  **獲取結果**：查看 `Portfolio_Backtest_Results` 資料夾，內含所有 CSV 數據報表與高清分析圖表。
+## ⚙️ 環境需求與安裝
+
+```r
+# 安裝必要套件
+install.packages(c(
+  "quantmod",   # 股票數據下載
+  "nloptr",     # 非線性優化
+  "dplyr",      # 資料處理
+  "tidyr",      # 資料整理
+  "lubridate",  # 日期處理
+  "scales",     # 格式化輸出
+  "ggplot2"     # 繪圖
+))
+```
+
+---
+
+## 🔍 各段落設計說明
+
+### 1. 資料下載與前處理
+
+使用 `quantmod::getSymbols()` 從 Yahoo Finance 下載調整後收盤價，並計算簡單日報酬率：
+
+```r
+# 下載調整後收盤價（Ad = Adjusted Close）
+data <- getSymbols(ticker, src = "yahoo", from = START_DATE,
+                   to = END_DATE, auto.assign = FALSE)
+price <- Ad(data)
+
+# 計算日報酬率
+# 公式：R_t = (P_t / P_{t-1}) - 1
+data_returns[, -1] <- (data_prices[, -1] / lag(data_prices[, -1])) - 1
+data_returns <- na.omit(data_returns)
+```
+
+> **設計邏輯**：採用調整後收盤價（已還原股息、股票分割），確保歷史報酬率不失真。
+
+---
+
+### 2. 數學優化設計
+
+#### 年化參數估計
+
+訓練期固定 2 年，以複利方式年化期望報酬，以線性方式年化共變異矩陣：
+
+```r
+annual_factor <- nrow(train_ret) / 2   # 動態年化因子
+
+# 年化期望報酬（複利）
+mu <- (1 + colMeans(train_ret))^annual_factor - 1
+
+# 年化共變異矩陣（線性縮放）
+sigma <- cov(train_ret) * annual_factor
+```
+
+#### 三種優化問題
+
+| 策略 | 目標函數 | 不等式限制 |
+|------|---------|-----------|
+| Max_Return | min $-\mathbf{w}^\top\boldsymbol{\mu}$ | $\sqrt{\mathbf{w}^\top\Sigma\mathbf{w}} \leq 0.30$ |
+| Min_Risk | min $\sqrt{\mathbf{w}^\top\Sigma\mathbf{w}}$ | $\mathbf{w}^\top\boldsymbol{\mu} \geq 0.10$ |
+| Trade_Off | min $-(\mathbf{w}^\top\boldsymbol{\mu} - \sqrt{\mathbf{w}^\top\Sigma\mathbf{w}})$ | $\sigma \leq 0.25$ 且 $\mu \geq 0.15$ |
+
+共同限制條件：
+
+```r
+eval_g_eq <- function(w) sum(w) - 1  # 預算限制：Σw = 1
+lb <- rep(0, n_assets)               # 非放空：w_i ≥ 0
+ub <- rep(1, n_assets)               # 單一標的上限
+
+# 求解器設定
+opts <- list(algorithm = "NLOPT_LN_COBYLA", xtol_rel = 1e-6, maxeval = 5000)
+res  <- nloptr(x0 = rep(1/n_assets, n_assets), eval_f = eval_f,
+               eval_g_ineq = eval_g_ineq, eval_g_eq = eval_g_eq,
+               lb = lb, ub = ub, opts = opts)
+```
+
+> **演算法說明**：`NLOPT_LN_COBYLA` 為無梯度局部優化器，透過線性近似處理約束，適合金融優化的非凸問題。輸出權重接近 0（如 ~1e-23）表示該資產被排除，為正常現象。
+
+---
+
+### 3. 滾動視窗回測
+
+```
+時間軸示意：
+|← 2年訓練期 →|← 0.5年測試 →|
+|← 2年訓練期 →    |← 0.5年測試 →|
+               ^ 每半年滾動一次
+```
+
+```r
+test_starts <- seq(as.Date("2018-01-01"), as.Date("2025-07-01"), by = "6 months")
+
+for (i in seq_along(test_starts)) {
+  test_start  <- test_starts[i]
+  test_end    <- test_start + months(6) - days(1)
+  train_end   <- test_start - days(1)
+  train_start <- train_end - years(2) + days(1)
+
+  # 1. 用訓練期數據求解最佳權重
+  w_max   <- run_optimization(train_matrix, "max_return", threshold1 = 0.3)
+  w_min   <- run_optimization(train_matrix, "min_risk",   threshold1 = 0.1)
+  w_trade <- run_optimization(train_matrix, "trade_off",  threshold1 = 0.25, threshold2 = 0.15)
+
+  # 2. 計算測試期報酬（避免 Look-ahead Bias）
+  stock_ret <- (price_end / price_start) - 1
+  port_ret  <- sum(w * stock_ret)
+}
+```
+
+> **公平比較設定**：單筆初始資本 = `16 × 6 × 5,000 = 480,000 元`，確保與 DCA 總投入相同。
+
+---
+
+### 4. 績效指標計算
+
+#### Sharpe Ratio（半年序列年化）
+```r
+# 公式：Sharpe = E[R] / Std[R] × √2
+sharpe <- lapply(returns_history, function(r) mean(r) / sd(r) * sqrt(2))
+```
+
+#### 最大回撤
+```r
+calc_max_drawdown <- function(wealth_series) {
+  peak     <- cummax(wealth_series)          # 滾動歷史高峰
+  drawdown <- (wealth_series - peak) / peak  # 各期回撤率
+  return(min(drawdown))                      # 最大跌幅
+}
+```
+
+#### 資訊比率（Information Ratio）
+```r
+# IR = Mean(主動報酬) / Std(主動報酬) × √2
+# 主動報酬 = 策略報酬 - 大盤報酬（追蹤誤差基礎）
+tracking_error       <- returns_history[[s]] - returns_history$benchmark
+information_ratio[i] <- mean(tracking_error) / sd(tracking_error) * sqrt(2)
+```
+
+---
+
+### 5. 統計顯著性檢定
+
+```r
+# 配對 t-test：H0: 策略報酬 = 大盤報酬
+test_result <- t.test(strategy_returns, returns_history$benchmark, paired = TRUE)
+```
+
+**結果摘要**：
+
+| 策略 | p-value | 結論 |
+|------|--------:|------|
+| Equal_Weight | **0.0217** ★ | **顯著優於大盤** |
+| DCA | 0.0752 | 邊際顯著（建議增加樣本） |
+| 其他 | > 0.40 | 與大盤無顯著差異 |
+
+---
+
+## 📈 視覺化結果
+
+### 圖一：財富累積走勢
+
+![財富累積](Portfolio_Backtest_Results/Plots/01_wealth_vs_benchmark.png)
+
+Equal_Weight 穩居第一（255萬），Max_Return 次之（228萬）但早期波動劇烈。
+
+---
+
+### 圖二：超額報酬 Alpha
+
+![Alpha](Portfolio_Backtest_Results/Plots/02_alpha_comparison.png)
+
+Equal_Weight Alpha +10.08%，顯示等權重對本標的池存在「小型股溢酬」效果。
+
+---
+
+### 圖三：夏普比率
+
+![Sharpe](Portfolio_Backtest_Results/Plots/03_sharpe_vs_benchmark.png)
+
+Equal_Weight（1.415）風險調整後報酬最佳；Max_Return（0.491）低於大盤，高報酬源於承擔更多風險。
+
+---
+
+### 圖四：逐期勝負記錄
+
+![Win Rate](Portfolio_Backtest_Results/Plots/04_win_rate_heatmap.png)
+
+Equal_Weight 與 DCA 同為 13/16 期勝出；第 6 期（2020 H2）疫情後大盤強彈，所有策略集體落後。
+
+---
+
+### 圖五：風險-報酬散佈
+
+![Risk Return](Portfolio_Backtest_Results/Plots/05_risk_return_scatter.png)
+
+Equal_Weight 位於左上角（效率前緣），Min_Risk 與 DCA 低風險但報酬偏低。
+
+---
+
+### 圖六：相對績效走勢
+
+![Relative Performance](Portfolio_Backtest_Results/Plots/06_relative_performance.png)
+
+> 計算方式：策略市值 / 大盤市值（排除 DCA，因資金節奏不同無法公平比較）
+
+四條線均高於基準線 1.0，表示單筆投入策略全程優於大盤：
+
+- **Max_Return（綠線）**：波動最劇，開局達 2.7 倍但震盪大，反映高集中持股風格
+- **Trade_Off（紫線）**：早期約 2.4 倍，優勢逐漸收斂至 2025 末的 1.5 倍
+- **Equal_Weight（橘線）**：最穩健，從 1.1 倍緩步爬升至 2.2 倍，無明顯震盪
+- **Min_Risk（藍線）**：長期在 1.0 附近游走（0.9–1.2 倍），安全但不超越大盤
+
+---
+
+### 圖七：回撤比較
+
+![Drawdown](Portfolio_Backtest_Results/Plots/07_drawdown_vs_benchmark.png)
+
+Max_Return 最大回撤 -39.1%（2018 H2，主因國巨 2327 腰斬）；Min_Risk 僅 -3.8%，防禦性最強。
+
+---
+
+## 🐛 已知問題與待改進項目
+
+| 問題 | 影響 | 建議修正 |
+|------|------|---------|
+| 未計交易成本 | 高頻調倉策略報酬高估 | 加入 0.3%（稅）+ 0.285%（佣金）|
+| 倖存者偏誤 | 歷史績效偏樂觀 | 使用各年度實際成分股 |
+| 局部最優解 | 優化結果不穩定 | 多起始點搜尋或全域優化器 |
+| 樣本數不足（n=16） | t-test 統計力低 | 縮短測試期為季度，n 擴增至 32 |
+
+---
+
+## 📚 參考資料
+
+- Markowitz, H. (1952). Portfolio Selection. *Journal of Finance*
+- nloptr 套件文件：https://cran.r-project.org/package=nloptr
+- COBYLA 算法：Powell, M.J.D. (1994). A direct search optimization method
+
+---
+
+## 📄 授權
+
+MIT License — 本專案僅供學術研究與個人學習用途，不構成任何投資建議。
