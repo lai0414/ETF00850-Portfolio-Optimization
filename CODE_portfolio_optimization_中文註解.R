@@ -724,6 +724,7 @@ write.csv(win_loss_matrix, file.path(ANALYSIS_DIR, "逐期勝負紀錄.csv"), ro
 write.csv(risk_return_data,file.path(ANALYSIS_DIR, "風險報酬分佈數據.csv"), row.names = FALSE)
 
 # 匯出圖表
+ggsave(file.path(PLOT_DIR, "00_correlation_matrix.png"), p0, width = 10, height = 8, dpi = 300)
 ggsave(file.path(PLOT_DIR, "01_wealth_vs_benchmark.png"), p1, width = 10, height = 6, dpi = 300)
 ggsave(file.path(PLOT_DIR, "02_alpha_comparison.png"), p2_alpha, width = 10, height = 6, dpi = 300)
 ggsave(file.path(PLOT_DIR, "03_sharpe_vs_benchmark.png"), p3_sharpe, width = 10, height = 6, dpi = 300)
@@ -739,3 +740,4 @@ cat(sprintf("✓ 詳細分析已儲存至: %s\n", ANALYSIS_DIR))
 cat("\n完成！\n")
 
 # ==============================================================================
+
