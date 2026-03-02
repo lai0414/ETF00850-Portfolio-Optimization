@@ -102,6 +102,19 @@ data_returns <- na.omit(data_returns)
 
 > **設計邏輯**：採用調整後收盤價（已還原股息、股票分割），確保歷史報酬率不失真。
 
+#### 相關係數矩陣
+
+```r
+cor_matrix <- cor(data_returns[, -1])
+```
+
+![相關係數矩陣](Portfolio_Backtest_Results/Plots/00_correlation_matrix.png)
+
+**主要發現：**
+- 金融四檔（2881/2891/2885/2890）相關係數 0.60–0.65，板塊效應最強
+- 中華電（2412）與多數標的相關係數僅 0.09–0.31，分散效果最佳 → Min_Risk 策略重倉原因
+- 整體相關係數範圍 0.09–0.65，具備足夠分散空間，是優化策略能發揮作用的基礎
+
 ---
 
 ### 2. 數學優化設計
@@ -299,14 +312,7 @@ Max_Return 最大回撤 -39.1%（2018 H2，主因國巨 2327 腰斬）；Min_Ris
 
 ---
 
-## 📚 參考資料
-
-- Markowitz, H. (1952). Portfolio Selection. *Journal of Finance*
-- nloptr 套件文件：https://cran.r-project.org/package=nloptr
-- COBYLA 算法：Powell, M.J.D. (1994). A direct search optimization method
-
----
-
 ## 📄 授權
 
 MIT License — 本專案僅供學術研究與個人學習用途，不構成任何投資建議。
+
